@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>公众号内容编辑与HTML生成工具</title>
+
+  <!-- 防缓存Meta标签 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta http-equiv="Last-Modified" content="0">
+  <meta http-equiv="If-Modified-Since" content="0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+  <!-- 配置Tailwind主题 -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            neutral: '#1F2937',
+            light: '#F9FAFB',
+            dark: '#111827',
+          },
+          fontFamily: {
+            inter: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .transition-all-300 {
+        transition: all 300ms ease-in-out;
+      }
+      .card-hover {
+        @apply hover:shadow-lg hover:-translate-y-1 transition-all duration-300;
+      }
+    }
+  </style>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    .editor-content [contenteditable=true]:empty:before {
+      content: attr(data-placeholder);
+      color: #9CA3AF;
+      pointer-events: none;
+    }
+
+    .editor-content img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    }
+
+    .pulse-animation {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.7;
+      }
+    }
+
+    .slide-in {
+      animation: slideIn 0.5s ease-out forwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    .scale-in {
+      animation: scaleIn 0.3s ease-out forwards;
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.95);
+        opacity: 0;
+      }
+
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col">
+  <!-- 顶部导航栏 -->
+  <header class="gradient-bg text-white shadow-md">
+    <div class="container mx-auto px-4 py-6">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center space-x-2 mb-4 md:mb-0">
+          <i class="fa fa-wechat text-2xl"></i>
+          <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-shadow">公众号内容编辑工具</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-all-300 flex items-center">
+            <i class="fa fa-question-circle mr-2"></i>
+            <span>帮助</span>
+          </button>
+          <button
+            class="bg-white text-primary hover:bg-gray-100 px-4 py-2 rounded-lg transition-all-300 flex items-center">
+            <i class="fa fa-github mr-2"></i>
+            <span>源码</span>
+          </button>
+        </div>
+      </div>
+      <p class="mt-2 text-blue-100 max-w-3xl">轻松获取公众号内容，编辑修改后生成自定义HTML，满足您的个性化需求</p>
+    </div>
+  </header>
+
+  <!-- 主要内容区域 -->
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <!-- 输入区域 -->
+    <section class="mb-10 slide-in" style="animation-delay: 0.1s">
+      <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+          <i class="fa fa-link text-primary mr-2"></i>
+          输入公众号链接
+        </h2>
+        <div class="flex flex-col md:flex-row gap-4">
+          <input type="url" id="articleUrl" placeholder="例如: https://mp.weixin.qq.com/s/..."
+            class="flex-grow px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all-300">
+          <button id="fetchContentBtn"
+            class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg font-medium transition-all-300 flex items-center justify-center">
+            <i class="fa fa-download mr-2"></i>
+            获取内容
+          </button>
+        </div>
+        <p class="text-gray-500 text-sm mt-3">请输入有效的公众号文章链接，系统将尝试获取文章内容供您编辑</p>
+      </div>
+    </section>
+
+    <!-- 加载状态 (默认隐藏) -->
+    <section id="loadingSection" class="mb-10 hidden fade-in">
+      <div class="bg-white rounded-xl shadow-md p-6 flex items-center justify-center">
+        <div class="flex items-center">
+          <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mr-4"></div>
+          <p class="text-gray-700 pulse-animation">正在获取公众号内容，请稍候...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 错误提示 (默认隐藏) -->
+    <section id="errorSection" class="mb-10 hidden fade-in">
+      <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+        <div class="flex items-start">
+          <i class="fa fa-exclamation-circle text-red-500 text-xl mt-0.5 mr-3"></i>
+          <div>
+            <h3 class="font-medium text-red-800">获取内容失败</h3>
+            <p class="text-red-700 mt-1" id="errorMessage">请检查链接是否正确，或尝试其他公众号文章链接。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 编辑区域 (默认隐藏) -->
+    <section id="editorSection" class="mb-10 hidden scale-in">
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+          <i class="fa fa-edit text-primary mr-2"></i>
+          编辑内容
+        </h2>
+
+        <!-- 编辑工具栏 -->
+        <div class="border-b border-gray-200 pb-3 mb-4">
+          <!-- 第一行：基础格式工具 -->
+          <div class="flex flex-wrap gap-2 mb-2">
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="undo">
+              <i class="fa fa-undo mr-1"></i>撤销
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="redo">
+              <i class="fa fa-repeat mr-1"></i>重做
+            </button>
+            <span class="h-5 border-r border-gray-300 mx-1"></span>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="formatBlock" data-value="<h1>">
+              <i class="fa fa-header mr-1"></i>H1
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="formatBlock" data-value="<h2>">
+              <i class="fa fa-header mr-1"></i>H2
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="formatBlock" data-value="<h3>">
+              <i class="fa fa-header mr-1"></i>H3
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="formatBlock" data-value="<p>">
+              <i class="fa fa-paragraph mr-1"></i>段落
+            </button>
+          </div>
+
+          <!-- 第二行：文本样式工具 -->
+          <div class="flex flex-wrap gap-2 mb-2">
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="bold">
+              <i class="fa fa-bold"></i>
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="italic">
+              <i class="fa fa-italic"></i>
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="underline">
+              <i class="fa fa-underline"></i>
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="strikeThrough">
+              <i class="fa fa-strikethrough"></i>
+            </button>
+            <span class="h-5 border-r border-gray-300 mx-1"></span>
+            <div class="flex items-center">
+              <label class="text-sm text-gray-600 mr-1">文字色：</label>
+              <input type="color" id="textColorPicker" class="w-8 h-8 rounded border-0 cursor-pointer" value="#000000">
+            </div>
+            <div class="flex items-center ml-2">
+              <label class="text-sm text-gray-600 mr-1">背景色：</label>
+              <input type="color" id="bgColorPicker" class="w-8 h-8 rounded border-0 cursor-pointer" value="#ffffff">
+            </div>
+          </div>
+
+          <!-- 第三行：对齐和列表工具 -->
+          <div class="flex flex-wrap gap-2">
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="justifyLeft">
+              <i class="fa fa-align-left"></i>
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="justifyCenter">
+              <i class="fa fa-align-center"></i>
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="justifyRight">
+              <i class="fa fa-align-right"></i>
+            </button>
+            <span class="h-5 border-r border-gray-300 mx-1"></span>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="insertUnorderedList">
+              <i class="fa fa-list-ul mr-1"></i>无序列表
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              data-command="insertOrderedList">
+              <i class="fa fa-list-ol mr-1"></i>有序列表
+            </button>
+            <span class="h-5 border-r border-gray-300 mx-1"></span>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              id="addImageBtn">
+              <i class="fa fa-image mr-1"></i>图片
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              id="addLinkBtn">
+              <i class="fa fa-link mr-1"></i>链接
+            </button>
+            <button
+              class="editor-tool px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300"
+              id="removeFormatBtn">
+              <i class="fa fa-eraser mr-1"></i>清除格式
+            </button>
+          </div>
+        </div>
+
+        <!-- 编辑器选项卡 -->
+        <div class="flex mb-4">
+          <button id="editTab" class="px-4 py-2 bg-primary text-white rounded-l-lg">编辑</button>
+          <button id="previewTab" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-r-lg">预览</button>
+        </div>
+
+        <!-- 编辑器主体 -->
+        <div id="editPanel">
+          <div id="editorContent"
+            class="editor-content min-h-[400px] p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none"
+            contenteditable="true" data-placeholder="获取到的公众号内容将显示在这里，您可以直接编辑..."></div>
+        </div>
+
+        <!-- 预览面板 -->
+        <div id="previewPanel" class="hidden">
+          <div id="previewContent" class="min-h-[400px] p-4 border border-gray-200 rounded-lg bg-white">
+            <div class="text-gray-500 text-center py-20">预览内容将显示在这里</div>
+          </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="mt-6 flex flex-wrap gap-4 justify-end">
+          <button id="resetBtn"
+            class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all-300">
+            <i class="fa fa-refresh mr-2"></i>重置
+          </button>
+          <button id="generateHtmlBtn"
+            class="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all-300">
+            <i class="fa fa-code mr-2"></i>生成HTML
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- HTML结果区域 (默认隐藏) -->
+    <section id="htmlResultSection" class="mb-10 hidden scale-in">
+      <div class="bg-white rounded-xl shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+          <i class="fa fa-html5 text-primary mr-2"></i>
+          生成的HTML内容
+        </h2>
+
+        <!-- 模板选择 -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">选择HTML模板:</label>
+          <select id="htmlTemplate"
+            class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+            <option value="basic">基础模板</option>
+            <option value="blog">博客文章模板</option>
+            <option value="email">邮件模板</option>
+            <option value="wechat">微信公众号模板</option>
+          </select>
+        </div>
+
+        <div class="relative">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-sm text-gray-500">可以复制下面的HTML代码使用</div>
+            <div class="flex space-x-2">
+              <button id="downloadHtmlBtn"
+                class="text-sm px-3 py-1 bg-green-100 hover:bg-green-200 rounded text-green-700 transition-all-300 flex items-center">
+                <i class="fa fa-download mr-1"></i>下载
+              </button>
+              <button id="copyHtmlBtn"
+                class="text-sm px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700 transition-all-300 flex items-center">
+                <i class="fa fa-copy mr-1"></i>复制
+              </button>
+            </div>
+          </div>
+          <pre id="htmlResult"
+            class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto max-h-[400px] text-sm"></pre>
+        </div>
+
+        <!-- 复制成功提示 (默认隐藏) -->
+        <div id="copySuccess" class="hidden mt-3 text-sm text-green-600 flex items-center">
+          <i class="fa fa-check-circle mr-1"></i> HTML代码已复制到剪贴板
+        </div>
+
+        <div class="mt-6 flex justify-end">
+          <button id="backToEditBtn"
+            class="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary/90 transition-all-300">
+            <i class="fa fa-arrow-left mr-2"></i>返回编辑
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 功能说明卡片 -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+          <i class="fa fa-link text-primary text-xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">输入链接</h3>
+        <p class="text-gray-600">粘贴公众号文章链接，系统将自动获取文章内容，包括文字和图片。</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+          <i class="fa fa-edit text-green-600 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">编辑内容</h3>
+        <p class="text-gray-600">使用丰富的编辑工具对内容进行修改，调整格式、添加或删除内容，满足您的需求。</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md p-6 card-hover">
+        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+          <i class="fa fa-code text-purple-600 text-xl"></i>
+        </div>
+        <h3 class="text-lg font-semibold mb-2">生成HTML</h3>
+        <p class="text-gray-600">编辑完成后生成HTML代码，可直接用于网站、博客或其他需要的地方。</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 页脚 -->
+  <footer class="bg-gray-800 text-gray-300 py-8">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-4 md:mb-0">
+          <p>© 2023 公众号内容编辑工具 | 保护您的编辑体验</p>
+        </div>
+        <div class="flex space-x-6">
+          <a href="#" class="hover:text-white transition-all-300"><i class="fa fa-github text-xl"></i></a>
+          <a href="#" class="hover:text-white transition-all-300"><i class="fa fa-twitter text-xl"></i></a>
+          <a href="#" class="hover:text-white transition-all-300"><i class="fa fa-weixin text-xl"></i></a>
+        </div>
+      </div>
+      <div class="mt-6 pt-6 border-t border-gray-700 text-sm text-gray-400 text-center">
+        <p>本工具仅用于内容编辑，请勿用于任何侵权行为。所有公众号内容版权归原作者所有。</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // DOM元素引用
+    const articleUrlInput = document.getElementById('articleUrl');
+    const fetchContentBtn = document.getElementById('fetchContentBtn');
+    const loadingSection = document.getElementById('loadingSection');
+    const errorSection = document.getElementById('errorSection');
+    const errorMessage = document.getElementById('errorMessage');
+    const editorSection = document.getElementById('editorSection');
+    const editorContent = document.getElementById('editorContent');
+    const generateHtmlBtn = document.getElementById('generateHtmlBtn');
+    const htmlResultSection = document.getElementById('htmlResultSection');
+    const htmlResult = document.getElementById('htmlResult');
+    const copyHtmlBtn = document.getElementById('copyHtmlBtn');
+    const copySuccess = document.getElementById('copySuccess');
+    const backToEditBtn = document.getElementById('backToEditBtn');
+    const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+    const htmlTemplate = document.getElementById('htmlTemplate');
+    const resetBtn = document.getElementById('resetBtn');
+    const addImageBtn = document.getElementById('addImageBtn');
+    const addLinkBtn = document.getElementById('addLinkBtn');
+    const removeFormatBtn = document.getElementById('removeFormatBtn');
+    const textColorPicker = document.getElementById('textColorPicker');
+    const bgColorPicker = document.getElementById('bgColorPicker');
+    const editorTools = document.querySelectorAll('.editor-tool');
+    const editTab = document.getElementById('editTab');
+    const previewTab = document.getElementById('previewTab');
+    const editPanel = document.getElementById('editPanel');
+    const previewPanel = document.getElementById('previewPanel');
+    const previewContent = document.getElementById('previewContent');
+
+    // 保存原始内容，用于重置
+    let originalContent = '';
+
+    // 模拟公众号文章数据 - 实际应用中应从API获取
+    const mockArticles = {
+      'https://mp.weixin.qq.com/s/example1': {
+        title: '如何有效提升公众号阅读量',
+        content: `
+          <h2>公众号运营的核心要素</h2>
+          <p>在当今的社交媒体环境中，公众号已经成为企业和个人传播信息的重要渠道。然而，随着竞争的加剧，如何提升公众号的阅读量成为许多运营者面临的挑战。</p>
+          <p>本文将从内容创作、标题优化和发布时间三个方面，分享提升公众号阅读量的实用技巧。</p>
+          
+          <h3>1. 优质内容是基础</h3>
+          <p>无论何种运营技巧，优质的内容始终是吸引读者的核心。优质内容应具备以下特点：</p>
+          <ul>
+            <li>有价值：能为读者提供实用信息或解决实际问题</li>
+            <li>有深度：对话题进行深入分析，而非浅尝辄止</li>
+            <li>有观点：表达独特的见解，引发读者思考</li>
+          </ul>
+          
+          <h3>2. 标题优化技巧</h3>
+          <p>一个吸引人的标题能够显著提高文章的打开率。以下是一些标题优化技巧：</p>
+          <ol>
+            <li>使用数字：如"5个技巧..."、"3种方法..."</li>
+            <li>提出问题：引发读者好奇心</li>
+            <li>制造悬念：激发读者的探索欲望</li>
+          </ol>
+          
+          <p><img src="https://picsum.photos/800/400?random=1" alt="公众号运营数据分析"></p>
+          
+          <h3>3. 选择最佳发布时间</h3>
+          <p>根据用户习惯研究，以下时间段发布公众号文章效果较好：</p>
+          <ul>
+            <li>早上7:00-9:00：用户通勤时间</li>
+            <li>中午12:00-13:30：午休时间</li>
+            <li>晚上19:00-21:00：睡前休闲时间</li>
+          </ul>
+          
+          <p>通过持续优化内容质量、标题吸引力和发布时间，您的公众号阅读量将逐步提升。记住，公众号运营是一个长期过程，需要耐心和坚持。</p>
+        `
+      },
+      'https://mp.weixin.qq.com/s/example2': {
+        title: '新媒体时代的内容创作指南',
+        content: `
+          <h2>什么是优质的新媒体内容？</h2>
+          <p>在信息爆炸的时代，优质内容变得越来越重要。优质的新媒体内容不仅能够吸引用户注意力，还能建立品牌影响力，促进用户互动。</p>
+          
+          <p><img src="https://picsum.photos/800/400?random=2" alt="内容创作"></p>
+          
+          <h3>优质内容的三大特征</h3>
+          <ol>
+            <li>
+              <strong>相关性</strong>：内容需要与目标受众的兴趣和需求相关
+            </li>
+            <li>
+              <strong>价值性</strong>：内容需要为用户提供实际价值，如知识、娱乐或解决方案
+            </li>
+            <li>
+              <strong>独特性</strong>：内容需要有独特的视角或表达方式，避免同质化
+            </li>
+          </ol>
+          
+          <h3>内容创作的实用技巧</h3>
+          <p>以下是一些提升内容创作质量的实用技巧：</p>
+          <ul>
+            <li>了解你的受众：研究目标用户的需求和偏好</li>
+            <li>制定内容计划：提前规划内容主题和发布节奏</li>
+            <li>使用多媒体：适当加入图片、视频等元素，提升可读性</li>
+            <li>鼓励互动：设计提问或讨论点，促进用户参与</li>
+            <li>分析数据：根据内容表现数据，不断优化创作方向</li>
+          </ul>
+          
+          <p>内容创作没有固定公式，但通过不断实践和调整，每个人都能找到适合自己的创作风格和方法。最重要的是保持创作热情，持续输出有价值的内容。</p>
+        `
+      }
+    };
+
+    // 验证URL是否为公众号链接
+    function isValidWechatUrl(url) {
+      try {
+        const parsedUrl = new URL(url);
+        return parsedUrl.hostname.includes('mp.weixin.qq.com');
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // 真实获取公众号内容的函数
+    async function fetchWechatArticle(url) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          // 首先尝试调用后端API
+          const response = await fetch('/api/wechat/parse', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: url })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              resolve({
+                title: result.data.title,
+                content: result.data.content
+              });
+              return;
+            }
+          } else {
+            // 如果API返回错误状态，也尝试解析错误信息
+            const errorResult = await response.json();
+            console.warn('API返回错误:', errorResult.error);
+          }
+        } catch (error) {
+          console.warn('后端API调用失败，使用mock数据:', error);
+        }
+
+        // 如果API调用失败，fallback到mock数据
+        setTimeout(() => {
+          // 检查是否是我们预设的示例链接
+          if (mockArticles[url]) {
+            resolve(mockArticles[url]);
+          } else if (url.includes('mp.weixin.qq.com')) {
+            // 对于其他公众号链接，返回一个通用示例内容
+            resolve({
+              title: '示例文章标题',
+              content: `
+                <h1>这是从"${url}"获取的示例内容</h1>
+                <p>当前为演示模式。在实际使用中，这里会显示真实的公众号文章内容。</p>
+                <p><img src="https://picsum.photos/800/400?random=3" alt="示例图片"></p>
+                <p>您可以使用编辑器修改这段文字，添加新内容，或调整格式。</p>
+                <h2>功能特点</h2>
+                <ul>
+                  <li>支持富文本编辑</li>
+                  <li>图片管理功能</li>
+                  <li>HTML代码生成</li>
+                  <li>实时预览效果</li>
+                </ul>
+              `
+            });
+          } else {
+            reject(new Error('无效的公众号链接，请检查后重试。'));
+          }
+        }, 1500);
+      });
+    }
+
+    // 显示加载状态
+    function showLoading() {
+      loadingSection.classList.remove('hidden');
+      errorSection.classList.add('hidden');
+      editorSection.classList.add('hidden');
+      htmlResultSection.classList.add('hidden');
+    }
+
+    // 显示错误信息
+    function showError(message) {
+      loadingSection.classList.add('hidden');
+      errorMessage.textContent = message;
+      errorSection.classList.remove('hidden');
+      editorSection.classList.add('hidden');
+      htmlResultSection.classList.add('hidden');
+    }
+
+    // 显示编辑器
+    function showEditor() {
+      loadingSection.classList.add('hidden');
+      errorSection.classList.add('hidden');
+      editorSection.classList.remove('hidden');
+      htmlResultSection.classList.add('hidden');
+
+      // 自动聚焦到编辑器
+      setTimeout(() => editorContent.focus(), 300);
+    }
+
+    // 显示HTML结果
+    function showHtmlResult() {
+      editorSection.classList.add('hidden');
+      htmlResultSection.classList.remove('hidden');
+    }
+
+    // 获取公众号内容
+    async function handleFetchContent() {
+      const url = articleUrlInput.value.trim();
+
+      if (!url) {
+        showError('请输入公众号文章链接');
+        return;
+      }
+
+      if (!isValidWechatUrl(url)) {
+        showError('请输入有效的公众号文章链接（应包含mp.weixin.qq.com）');
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const article = await fetchWechatArticle(url);
+        // 设置编辑器内容
+        editorContent.innerHTML = article.content;
+        // 保存原始内容用于重置
+        originalContent = article.content;
+        showEditor();
+      } catch (error) {
+        showError(error.message);
+      }
+    }
+
+    // HTML模板
+    const htmlTemplates = {
+      basic: (content) => `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>基础文章</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    img { max-width: 100%; height: auto; margin: 1rem 0; }
+    h1, h2, h3 { margin-top: 1.5rem; margin-bottom: 0.5rem; color: #222; }
+    p { margin-bottom: 1rem; }
+    ul, ol { margin-bottom: 1rem; padding-left: 2rem; }
+  </style>
+</head>
+<body>
+  ${content}
+</body>
+</html>`,
+
+      blog: (content) => `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>博客文章</title>
+  <style>
+    body {
+      font-family: "Georgia", "Times New Roman", serif;
+      line-height: 1.8;
+      color: #2c3e50;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f8f9fa;
+    }
+    .article-container {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    img { max-width: 100%; height: auto; margin: 2rem 0; border-radius: 4px; }
+    h1 { font-size: 2.5rem; color: #1a202c; margin-bottom: 1rem; }
+    h2 { font-size: 2rem; color: #2d3748; margin-top: 2rem; margin-bottom: 1rem; }
+    h3 { font-size: 1.5rem; color: #4a5568; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+    p { margin-bottom: 1.5rem; font-size: 1.1rem; }
+    ul, ol { margin-bottom: 1.5rem; padding-left: 2rem; }
+    li { margin-bottom: 0.5rem; }
+    blockquote { 
+      border-left: 4px solid #3182ce; 
+      padding-left: 1rem; 
+      margin: 2rem 0; 
+      font-style: italic; 
+      color: #718096; 
+    }
+  </style>
+</head>
+<body>
+  <div class="article-container">
+    ${content}
+  </div>
+</body>
+</html>`,
+
+      email: (content) => `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>邮件模板</title>
+</head>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f4;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;padding:20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="padding:40px;">
+              ${content.replace(/style="[^"]*"/g, '').replace(/<img/g, '<img style="max-width:100%;height:auto;display:block;margin:20px 0;"')}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+
+      wechat: (content) => `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微信公众号文章</title>
+  <style>
+    body {
+      font-family: -apple-system-font, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      line-height: 1.75;
+      color: #333;
+      background: #f7f7f7;
+      margin: 0;
+      padding: 20px;
+    }
+    .wx-container {
+      max-width: 677px;
+      margin: 0 auto;
+      background: white;
+      padding: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .wx-content {
+      padding: 20px 16px 30px;
+      font-size: 17px;
+    }
+    img { 
+      max-width: 100%; 
+      height: auto; 
+      display: block; 
+      margin: 20px auto; 
+    }
+    h1 { 
+      font-size: 24px; 
+      font-weight: bold; 
+      color: #222; 
+      margin: 20px 0 15px; 
+      line-height: 1.4; 
+    }
+    h2 { 
+      font-size: 20px; 
+      font-weight: bold; 
+      color: #333; 
+      margin: 25px 0 10px; 
+    }
+    h3 { 
+      font-size: 18px; 
+      font-weight: bold; 
+      color: #555; 
+      margin: 20px 0 8px; 
+    }
+    p { 
+      margin: 15px 0; 
+      text-align: justify; 
+    }
+    ul, ol { 
+      margin: 15px 0; 
+      padding-left: 20px; 
+    }
+    li { 
+      margin: 8px 0; 
+    }
+    strong { 
+      font-weight: bold; 
+      color: #222; 
+    }
+    em { 
+      font-style: italic; 
+    }
+  </style>
+</head>
+<body>
+  <div class="wx-container">
+    <div class="wx-content">
+      ${content}
+    </div>
+  </div>
+</body>
+</html>`
+    };
+
+    // 生成HTML
+    function handleGenerateHtml() {
+      // 获取编辑器内容
+      const content = editorContent.innerHTML;
+      const templateType = htmlTemplate.value;
+
+      // 使用选择的模板生成HTML
+      const fullHtml = htmlTemplates[templateType](content);
+
+      // 显示HTML结果
+      htmlResult.textContent = fullHtml;
+      showHtmlResult();
+    }
+
+    // 复制HTML到剪贴板
+    function handleCopyHtml() {
+      const textToCopy = htmlResult.textContent;
+
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        // 显示复制成功提示
+        copySuccess.classList.remove('hidden');
+        setTimeout(() => {
+          copySuccess.classList.add('hidden');
+        }, 3000);
+      }).catch(err => {
+        console.error('无法复制文本: ', err);
+        alert('复制失败，请手动复制');
+      });
+    }
+
+    // 编辑器工具按钮点击事件
+    function handleEditorToolClick(e) {
+      e.preventDefault();
+
+      const tool = e.currentTarget;
+      const command = tool.dataset.command;
+      const value = tool.dataset.value;
+
+      // 执行相应的命令
+      document.execCommand(command, false, value);
+      // 重新聚焦到编辑器
+      editorContent.focus();
+    }
+
+    // 添加图片
+    function handleAddImage() {
+      // 创建一个模态对话框让用户选择图片来源
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      modal.innerHTML = `
+         <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+           <h3 class="text-lg font-semibold mb-4">添加图片</h3>
+           <div class="space-y-4">
+             <div>
+               <label class="block text-sm font-medium text-gray-700 mb-2">选择图片来源:</label>
+               <div class="space-y-2">
+                 <button id="addUrlImage" class="w-full text-left px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+                   <i class="fa fa-link mr-2"></i>从网络链接添加
+                 </button>
+                 <button id="addFileImage" class="w-full text-left px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">
+                   <i class="fa fa-upload mr-2"></i>上传本地图片
+                 </button>
+               </div>
+               <input type="file" id="imageFileInput" class="hidden" accept="image/*">
+             </div>
+             <div class="flex justify-end space-x-2">
+               <button id="cancelImageAdd" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">取消</button>
+             </div>
+           </div>
+         </div>
+       `;
+
+      document.body.appendChild(modal);
+
+      // 事件处理
+      document.getElementById('addUrlImage').addEventListener('click', () => {
+        const imageUrl = prompt('请输入图片URL:');
+        if (imageUrl) {
+          document.execCommand('insertImage', false, imageUrl);
+          editorContent.focus();
+        }
+        document.body.removeChild(modal);
+      });
+
+      document.getElementById('addFileImage').addEventListener('click', () => {
+        document.getElementById('imageFileInput').click();
+      });
+
+      document.getElementById('imageFileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            document.execCommand('insertImage', false, e.target.result);
+            editorContent.focus();
+          };
+          reader.readAsDataURL(file);
+        }
+        document.body.removeChild(modal);
+      });
+
+      document.getElementById('cancelImageAdd').addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+
+      // 点击模态框外部关闭
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+    }
+
+    // 添加链接
+    function handleAddLink() {
+      const linkUrl = prompt('请输入链接URL:');
+      const linkText = prompt('请输入链接文本:');
+      if (linkUrl && linkText) {
+        document.execCommand('createLink', false, linkUrl);
+        editorContent.focus();
+      }
+    }
+
+    // 清除格式
+    function handleRemoveFormat() {
+      document.execCommand('removeFormat', false, null);
+      editorContent.focus();
+    }
+
+    // 设置文字颜色
+    function handleSetTextColor(event) {
+      const color = event.target.value;
+      document.execCommand('foreColor', false, color);
+      editorContent.focus();
+    }
+
+    // 设置背景颜色
+    function handleSetBgColor(event) {
+      const color = event.target.value;
+      document.execCommand('hiliteColor', false, color);
+      editorContent.focus();
+    }
+
+    // 撤销
+    function handleUndo() {
+      document.execCommand('undo', false, null);
+      editorContent.focus();
+    }
+
+    // 重做
+    function handleRedo() {
+      document.execCommand('redo', false, null);
+      editorContent.focus();
+    }
+
+    // 切换到编辑模式
+    function switchToEdit() {
+      editTab.classList.remove('bg-gray-200', 'text-gray-700');
+      editTab.classList.add('bg-primary', 'text-white');
+      previewTab.classList.remove('bg-primary', 'text-white');
+      previewTab.classList.add('bg-gray-200', 'text-gray-700');
+
+      editPanel.classList.remove('hidden');
+      previewPanel.classList.add('hidden');
+    }
+
+    // 切换到预览模式
+    function switchToPreview() {
+      previewTab.classList.remove('bg-gray-200', 'text-gray-700');
+      previewTab.classList.add('bg-primary', 'text-white');
+      editTab.classList.remove('bg-primary', 'text-white');
+      editTab.classList.add('bg-gray-200', 'text-gray-700');
+
+      editPanel.classList.add('hidden');
+      previewPanel.classList.remove('hidden');
+
+      // 更新预览内容
+      updatePreview();
+    }
+
+    // 更新预览内容
+    function updatePreview() {
+      const content = editorContent.innerHTML;
+      // 添加预览样式
+      const styledContent = `
+         <style>
+           .preview-content {
+             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+             line-height: 1.6;
+             color: #333;
+           }
+           .preview-content img {
+             max-width: 100%;
+             height: auto;
+             margin: 1rem 0;
+             border-radius: 4px;
+           }
+           .preview-content h1, .preview-content h2, .preview-content h3 {
+             margin-top: 1.5rem;
+             margin-bottom: 0.5rem;
+             color: #222;
+             font-weight: 600;
+           }
+           .preview-content h1 { font-size: 2rem; }
+           .preview-content h2 { font-size: 1.5rem; }
+           .preview-content h3 { font-size: 1.25rem; }
+           .preview-content p {
+             margin-bottom: 1rem;
+           }
+           .preview-content ul, .preview-content ol {
+             margin-bottom: 1rem;
+             padding-left: 2rem;
+           }
+           .preview-content li {
+             margin-bottom: 0.25rem;
+           }
+           .preview-content a {
+             color: #3B82F6;
+             text-decoration: underline;
+           }
+           .preview-content blockquote {
+             border-left: 4px solid #e5e7eb;
+             padding-left: 1rem;
+             margin: 1rem 0;
+             font-style: italic;
+             color: #666;
+           }
+         </style>
+         <div class="preview-content">${content}</div>
+       `;
+      previewContent.innerHTML = styledContent;
+    }
+
+    // 事件监听
+    fetchContentBtn.addEventListener('click', handleFetchContent);
+
+    generateHtmlBtn.addEventListener('click', handleGenerateHtml);
+
+    copyHtmlBtn.addEventListener('click', handleCopyHtml);
+
+    // 下载HTML文件
+    downloadHtmlBtn.addEventListener('click', () => {
+      const htmlContent = htmlResult.textContent;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `article-${Date.now()}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // 模板改变时重新生成HTML
+    htmlTemplate.addEventListener('change', () => {
+      if (!htmlResultSection.classList.contains('hidden')) {
+        handleGenerateHtml();
+      }
+    });
+
+    backToEditBtn.addEventListener('click', showEditor);
+
+    resetBtn.addEventListener('click', () => {
+      if (originalContent) {
+        editorContent.innerHTML = originalContent;
+        editorContent.focus();
+      }
+    });
+
+    addImageBtn.addEventListener('click', handleAddImage);
+    addLinkBtn.addEventListener('click', handleAddLink);
+    removeFormatBtn.addEventListener('click', handleRemoveFormat);
+    textColorPicker.addEventListener('change', handleSetTextColor);
+    bgColorPicker.addEventListener('change', handleSetBgColor);
+
+    // 预览选项卡事件
+    editTab.addEventListener('click', switchToEdit);
+    previewTab.addEventListener('click', switchToPreview);
+
+    // 为所有编辑器工具添加点击事件
+    editorTools.forEach(tool => {
+      if (!tool.id || (tool.id !== 'addImageBtn' && tool.id !== 'addLinkBtn' && tool.id !== 'removeFormatBtn')) {
+        tool.addEventListener('click', handleEditorToolClick);
+      }
+    });
+
+    // 支持回车键提交URL
+    articleUrlInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        handleFetchContent();
+      }
+    });
+
+    // 自动填充示例URL（方便测试）
+    window.addEventListener('load', () => {
+      // 3秒后自动填充示例URL（仅用于演示）
+      setTimeout(() => {
+        if (!articleUrlInput.value) {
+          articleUrlInput.value = 'https://mp.weixin.qq.com/s/example1';
+        }
+      }, 3000);
+    });
+  </script>
+</body>
+
+</html>
