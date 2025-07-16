@@ -73,11 +73,10 @@ npm run start
 
 服务将在 `http://localhost:3303` 启动
 
-### 4. 开发模式（可选）
+### 4. 访问
 ```bash
-npm run dev
+http://localhost:3303/
 ```
-使用nodemon进行开发，文件变更时自动重启
 
 ## 🌐 API接口
 
